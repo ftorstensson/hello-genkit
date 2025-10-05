@@ -1,30 +1,46 @@
+/*
+ * Hello Genkit - Definitive Production Version v1.0
+ * This is the stable bedrock, built according to expert validation.
+ * It uses a manual Express server with explicit JSON body parsing
+ * and the correct 'expressHandler' function to fix the body-parsing bug.
+*/
 import { genkit, z } from 'genkit';
-import { startFlowServer } from '@genkit-ai/express';
-import { googleAI } from '@genkit-ai/google-genai'; // We must import the AI provider
+import { googleAI } from '@genkit-ai/google-genai';
+import express from 'express';
+import { expressHandler } from '@genkit-ai/express';
 
 // --- Initialization ---
 const ai = genkit({
-  plugins: [
-    googleAI(), // We must initialize the AI plugin
-  ],
+  plugins: [googleAI()],
 });
 
-// Define the schema for our input
-const HelloSchema = z.object({ name: z.string() });
+// --- Schema ---
+const HelloSchema = z.object({
+  name: z.string(),
+});
 
-export const helloFlow = ai.defineFlow({ // CORRECT SYNTAX: defineFlow is attached to the 'ai' object
+// --- Flow ---
+export const helloFlow = ai.defineFlow(
+  {
     name: 'helloFlow',
     inputSchema: HelloSchema,
     outputSchema: z.string(),
-},
-async (input) => { // TypeScript can now infer the type correctly
-    console.log(`✅ Received input: ${JSON.stringify(input)}`);
+  },
+  async (input) => {
+    console.log(`✅ [hello-genkit] Received input: ${JSON.stringify(input)}`);
     return `Hello, ${input.name}`;
-});
+  }
+);
 
-if (process.env.GENKIT_ENV !== 'dev') {
-    startFlowServer({
-        port: process.env.PORT ? parseInt(process.env.PORT) : 8080,
-        flows: [helloFlow],
-    });
-}
+// --- Manual Express Server ---
+const app = express();
+app.use(express.json()); // Explicit JSON parsing
+
+// Attach the flow to the /helloFlow endpoint
+app.post('/helloFlow', expressHandler(helloFlow));
+
+// Start server
+const port = process.env.PORT || 8080;
+app.listen(port, () => {
+  console.log(`✅ [hello-genkit] Server listening on port ${port}`);
+});
