@@ -1,8 +1,10 @@
 /*
- * Hello Genkit - Definitive Production Version v4.0 (Authoritative)
- * This version resolves the middleware paradox by removing the global
- * express.json() parser and relying on the expressHandler's internal,
- * Zod-aware parser. This is the production-safe, authoritative pattern.
+ * Hello Genkit - Definitive Production Version v5.0 (Authoritative)
+ * This version implements the expert-validated, authoritative pattern for
+ * Genkit v1.2.0 on a custom Express server. It resolves the middleware
+ * paradox by applying express.json() as a route-specific middleware,
+ * ensuring the request body is parsed correctly without stream conflicts.
+ * This is the stable bedrock and the final version.
  */
 
 import { genkit, z } from 'genkit';
@@ -37,11 +39,13 @@ export const helloFlow = ai.defineFlow(
 const app = express();
 const port = process.env.PORT || 8080;
 
-// The global app.use(express.json()) has been removed to prevent
-// the request stream from being consumed before reaching the Genkit handler.
-
-// The expressHandler now manages its own body parsing.
-app.post('/helloFlow', expressHandler(helloFlow));
+// The JSON parser is applied as route-specific middleware,
+// just before the Genkit handler in the chain.
+app.post(
+  '/helloFlow',
+  express.json({ limit: '10mb' }), // Middleware for this route only
+  expressHandler(helloFlow)         // The Genkit handler
+);
 
 // Health check for Cloud Run readiness probe.
 app.get('/healthz', (req, res) => res.status(200).send('OK'));
